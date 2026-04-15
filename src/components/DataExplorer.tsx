@@ -1,5 +1,4 @@
 import { Download, CheckCircle, Sparkles } from "lucide-react";
-import { Download, CheckCircle, Sparkles } from "lucide-react";
 
 const sampleData = [
   { name: "Constructora Eje Sur SpA", category: "Construcción", phone: "+56 9 8765 4321", web: "ejesur.cl", rating: 4.8, verified: true },
