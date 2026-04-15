@@ -1,16 +1,43 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { Helmet } from "react-helmet-async";
+import StickyHeader from "@/components/StickyHeader";
+import HeroSection from "@/components/HeroSection";
+import DataExplorer from "@/components/DataExplorer";
+import SolutionsSection from "@/components/SolutionsSection";
+import IndustryStrip from "@/components/IndustryStrip";
+import GuaranteeSection from "@/components/GuaranteeSection";
+import PricingSection from "@/components/PricingSection";
+import FAQSection from "@/components/FAQSection";
+import WhatsAppButton from "@/components/WhatsAppButton";
+import CheckoutDialog from "@/components/CheckoutDialog";
+import { LegalSection, Footer } from "@/components/FooterSection";
+import { type PricingPlan } from "@/data/pricing";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const [loading, setLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
+
+  const handleSearch = () => {
+    setLoading(true);
+    setTimeout(() => setLoading(false), 1500);
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
+    <>
+      <StickyHeader />
+      <HeroSection onSearch={handleSearch} />
+      <DataExplorer loading={loading} />
+      <IndustryStrip />
+      <SolutionsSection />
+      <GuaranteeSection />
+      <PricingSection onBuy={setSelectedPlan} />
+      <FAQSection />
+      <LegalSection />
+      <Footer />
+      <WhatsAppButton />
+      <CheckoutDialog plan={selectedPlan} onClose={() => setSelectedPlan(null)} />
+    </>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;

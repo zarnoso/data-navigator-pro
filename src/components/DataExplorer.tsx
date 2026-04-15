@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { } from "react";
 import { Download, CheckCircle, Sparkles } from "lucide-react";
 
 const sampleData = [
