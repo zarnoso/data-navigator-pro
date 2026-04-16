@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
-import { MapPin, Menu, X } from "lucide-react";
+import { MapPin, Menu, X, User } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const navLinks = [
   { label: "Explorador", href: "#explorador" },
   { label: "Soluciones", href: "#soluciones" },
   { label: "Precios", href: "#precios" },
   { label: "FAQ", href: "#faq" },
+  { label: "API Docs", href: "/dashboard/api-docs" },
 ];
 
 const StickyHeader = () => {
