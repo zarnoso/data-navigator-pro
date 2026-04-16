@@ -37,23 +37,52 @@ const StickyHeader = () => {
         </a>
 
         <nav className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link) =>
+            link.href.startsWith("/") ? (
+              <Link
+                key={link.href}
+                to={link.href}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {link.label}
+              </Link>
+            ) : (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {link.label}
+              </a>
+            )
+          )}
         </nav>
 
-        <a
-          href="#precios"
-          className="hidden md:inline-flex gradient-primary text-primary-foreground font-semibold text-sm px-5 py-2.5 rounded-lg hover:opacity-90 transition-opacity"
-        >
-          Comprar Ahora
-        </a>
+        <div className="hidden md:flex items-center gap-3">
+          {user ? (
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-2 gradient-primary text-primary-foreground font-semibold text-sm px-5 py-2.5 rounded-lg hover:opacity-90 transition-opacity"
+            >
+              <User className="h-4 w-4" /> Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                to="/auth"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Iniciar Sesión
+              </Link>
+              <a
+                href="#precios"
+                className="gradient-primary text-primary-foreground font-semibold text-sm px-5 py-2.5 rounded-lg hover:opacity-90 transition-opacity"
+              >
+                Comprar Ahora
+              </a>
+            </>
+          )}
+        </div>
 
         <button
           className="md:hidden text-foreground"
