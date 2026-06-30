@@ -1,1 +1,10 @@
 project_id = "atpcolmumyebhcvmkixi"
+
+# El webhook de MercadoPago no recibe JWT de usuario; se valida por el
+# external_reference + consulta a la API de MP (y opcionalmente firma propia).
+[functions.mapadata-billing-webhook]
+verify_jwt = false
+
+# Health debe poder consultarse sin sesión para monitoreo externo.
+[functions.mapadata-health]
+verify_jwt = false
