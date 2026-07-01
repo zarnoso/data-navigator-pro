@@ -1,0 +1,177 @@
+import { supabase } from "../supabase.js";
+import { config } from "../config.js";
+import { buildPlan, type RunPlan } from "./planner.js";
+import { searchText } from "./google-places.js";
+import { normalize, score, type NormalizedLead } from "./normalizer.js";
+import { dedupe } from "./dedupe.js";
+import { buildXlsx, buildCsv } from "./export-builder.js";
+import pino from "pino";
+
+const log = pino({ name: "runner" });
+
+async function updateRun(runId: string, patch: Record<string, unknown>) {
+  await supabase.from("mapadata_search_runs").update(patch).eq("id", runId);
+}
+
+async function fetchLeads(plan: RunPlan): Promise<NormalizedLead[]> {
+  const all: NormalizedLead[] = [];
+  const queries = plan.keywords.map((k) => `${k} en ${plan.comunaSlug}`);
+  for (const q of queries) {
+    if (all.length >= plan.requestedLimit) break;
+    try {
+      const raws = await searchText(q, plan);
+      for (const r of raws) {
+        const n = normalize(r, plan);
+        if (!n) continue;
+        n.quality_score = score(n);
+        all.push(n);
+      }
+    } catch (e) {
+      log.warn({ q, err: (e as Error).message }, "places_query_failed");
+    }
+  }
+  return dedupe(all).slice(0, plan.requestedLimit);
+}
+
+async function persistLeads(plan: RunPlan, leads: NormalizedLead[]): Promise<string[]> {
+  const ids: string[] = [];
+  const chunkSize = 100;
+  for (let i = 0; i < leads.length; i += chunkSize) {
+    const chunk = leads.slice(i, i + chunkSize).map((l) => ({
+      user_id: plan.userId,
+      place_id: l.place_id,
+      name: l.name,
+      address: l.address,
+      phone_e164: l.phone_e164,
+      phone_raw: l.phone_raw,
+      website: l.website,
+      email: l.email,
+      types: l.types,
+      primary_type: l.primary_type,
+      lat: l.lat,
+      lng: l.lng,
+      rating: l.rating,
+      reviews: l.reviews,
+      business_status: l.business_status,
+      region: l.region,
+      comuna_slug: l.comuna_slug,
+      industry_slug: l.industry_slug,
+      quality_score: l.quality_score,
+      source: "google_places",
+    }));
+
+    const { data, error } = await supabase
+      .from("mapadata_leads")
+      .upsert(chunk, { onConflict: "user_id,place_id" })
+      .select("id");
+    if (error) throw new Error(`persist_leads:${error.message}`);
+    if (data) ids.push(...data.map((r: { id: string }) => r.id));
+
+    await updateRun(plan.runId, {
+      progress_pct: Math.min(90, Math.round(((i + chunk.length) / leads.length) * 80) + 10),
+    });
+  }
+
+  const runLeads = ids.map((leadId) => ({ run_id: plan.runId, lead_id: leadId }));
+  if (runLeads.length) {
+    for (let i = 0; i < runLeads.length; i += 500) {
+      await supabase.from("mapadata_run_leads").upsert(runLeads.slice(i, i + 500), {
+        onConflict: "run_id,lead_id",
+      });
+    }
+  }
+  return ids;
+}
+
+async function buildAndUpload(plan: RunPlan, leads: NormalizedLead[]) {
+  const title = `${plan.industrySlug}_${plan.comunaSlug}_${Date.now()}`;
+  const outputs: Array<{ format: string; path: string; bytes: number }> = [];
+
+  for (const fmt of plan.formats) {
+    let buffer: Buffer;
+    let ext: string;
+    let contentType: string;
+    if (fmt === "xlsx") {
+      buffer = await buildXlsx(leads, title);
+      ext = "xlsx";
+      contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    } else if (fmt === "csv") {
+      buffer = buildCsv(leads);
+      ext = "csv";
+      contentType = "text/csv";
+    } else continue;
+
+    const path = `${plan.userId}/${plan.runId}/${title}.${ext}`;
+    const { error } = await supabase.storage
+      .from(config.MAPADATA_EXPORTS_BUCKET)
+      .upload(path, buffer, { contentType, upsert: true });
+    if (error) throw new Error(`storage_upload:${error.message}`);
+
+    await supabase.from("mapadata_exports").insert({
+      user_id: plan.userId,
+      run_id: plan.runId,
+      format: fmt,
+      status: "ready",
+      row_count: leads.length,
+      storage_path: path,
+      bytes: buffer.length,
+    });
+    outputs.push({ format: fmt, path, bytes: buffer.length });
+  }
+  return outputs;
+}
+
+export async function processRun(runId: string): Promise<void> {
+  log.info({ runId }, "run_start");
+  try {
+    await updateRun(runId, {
+      status: "running",
+      worker_started_at: new Date().toISOString(),
+      progress_pct: 5,
+      error_message: null,
+    });
+
+    const plan = await buildPlan(runId);
+    await updateRun(runId, { progress_pct: 10 });
+
+    const leads = await fetchLeads(plan);
+    if (leads.length === 0) {
+      await updateRun(runId, {
+        status: "completed",
+        progress_pct: 100,
+        worker_finished_at: new Date().toISOString(),
+        result_count: 0,
+        error_message: "no_results",
+      });
+      return;
+    }
+
+    await persistLeads(plan, leads);
+    await updateRun(runId, { progress_pct: 92 });
+
+    const outputs = await buildAndUpload(plan, leads);
+
+    // Consumir créditos SOLO tras éxito
+    const { data: consumed } = await supabase.rpc("mapadata_consume_credits", {
+      _user_id: plan.userId,
+      _amount: leads.length,
+    });
+
+    await updateRun(runId, {
+      status: "completed",
+      progress_pct: 100,
+      worker_finished_at: new Date().toISOString(),
+      result_count: leads.length,
+      params: { outputs, credits_consumed: consumed === true ? leads.length : 0 },
+    });
+    log.info({ runId, leads: leads.length }, "run_done");
+  } catch (e) {
+    const msg = (e as Error).message;
+    log.error({ runId, err: msg }, "run_failed");
+    await updateRun(runId, {
+      status: "failed",
+      error_message: msg.slice(0, 500),
+      worker_finished_at: new Date().toISOString(),
+    });
+  }
+}

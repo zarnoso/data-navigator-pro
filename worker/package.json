@@ -1,0 +1,29 @@
+{
+  "name": "mapadata-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Worker externo (DonWeb) para el Mapadata Lead Builder. Consume Google Places, normaliza, deduplica, genera XLSX/CSV y sube a Supabase Storage.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "csv-stringify": "^6.5.0",
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "pino": "^9.3.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  }
+}
