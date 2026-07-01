@@ -6,7 +6,13 @@ Deno.serve(async (req) => {
   let user; try { user = await requireUser(req); } catch (r) { return r as Response; }
 
   const url = new URL(req.url);
-  const exportId = url.searchParams.get("id") ?? url.pathname.split("/").pop();
+  let exportId = url.searchParams.get("id") ?? url.searchParams.get("export_id");
+  if (!exportId && (req.method === "POST" || req.method === "PUT")) {
+    try {
+      const body = await req.json();
+      exportId = body?.export_id ?? body?.id ?? null;
+    } catch { /* ignore */ }
+  }
   if (!exportId) return json({ error: "missing_id" }, 400);
 
   const supa = adminClient();
