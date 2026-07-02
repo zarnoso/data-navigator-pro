@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Play, Download, RefreshCw, ListTodo } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Run {
   id: string;
@@ -38,6 +40,10 @@ const Tasks = () => {
   const [exports_, setExports] = useState<ExportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [industry, setIndustry] = useState("");
+  const [comuna, setComuna] = useState("");
+  const [region, setRegion] = useState("");
+  const [limitN, setLimitN] = useState(100);
 
   const loadRuns = async () => {
     const { data, error } = await supabase.functions.invoke("mapadata-runs-list", { method: "GET" });
@@ -60,15 +66,20 @@ const Tasks = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runs.map((r) => `${r.id}:${r.status}`).join(",")]);
 
-  const createFerreteriaRun = async () => {
+  const createRun = async () => {
+    if (!industry.trim() || !comuna.trim()) {
+      toast({ title: "Faltan datos", description: "Ingresa rubro y comuna/ciudad.", variant: "destructive" });
+      return;
+    }
     setCreating(true);
     const { data, error } = await supabase.functions.invoke("mapadata-runs-create", {
       body: {
-        industry_slug: "ferreteria",
-        comuna_slug: "valparaiso",
-        limit: 500,
+        industry: industry.trim(),
+        comuna: comuna.trim(),
+        region: region.trim() || undefined,
+        limit: limitN,
         formats: ["xlsx", "csv"],
-        name: "500 ferreterías Valparaíso",
+        name: `${limitN} ${industry.trim()} · ${comuna.trim()}`,
       },
     });
     setCreating(false);
@@ -115,12 +126,40 @@ const Tasks = () => {
           >
             +500 créditos (dev)
           </Button>
-          <Button onClick={createFerreteriaRun} disabled={creating} size="sm">
-            {creating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-            Generar 500 ferreterías Valparaíso
-          </Button>
         </div>
       </div>
+
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Nueva búsqueda</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 md:grid-cols-5">
+            <div className="md:col-span-2">
+              <Label htmlFor="industry">Rubro / keyword</Label>
+              <Input id="industry" value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="ej: restaurantes, dentistas, ferretería" />
+            </div>
+            <div>
+              <Label htmlFor="comuna">Comuna / ciudad</Label>
+              <Input id="comuna" value={comuna} onChange={(e) => setComuna(e.target.value)} placeholder="ej: Providencia" />
+            </div>
+            <div>
+              <Label htmlFor="region">Región (opcional)</Label>
+              <Input id="region" value={region} onChange={(e) => setRegion(e.target.value)} placeholder="ej: Metropolitana" />
+            </div>
+            <div>
+              <Label htmlFor="limit">Cantidad</Label>
+              <Input id="limit" type="number" min={1} max={5000} value={limitN} onChange={(e) => setLimitN(parseInt(e.target.value) || 1)} />
+            </div>
+          </div>
+          <div className="mt-4">
+            <Button onClick={createRun} disabled={creating} size="sm">
+              {creating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
+              Generar búsqueda
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {loading ? (
         <Card><CardContent className="py-12 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></CardContent></Card>
