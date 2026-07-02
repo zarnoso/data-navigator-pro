@@ -98,9 +98,22 @@ const Tasks = () => {
           <h1 className="text-2xl font-bold text-foreground mb-1">Tareas</h1>
           <p className="text-muted-foreground">Runs del Lead Builder. Se procesan asincrónicamente en el worker.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={loadRuns}>
             <RefreshCw className="h-4 w-4 mr-2" /> Refrescar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              const { data, error } = await supabase.functions.invoke("mapadata-dev-grant-credits", {
+                body: { amount: 500 },
+              });
+              if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+              else toast({ title: "Créditos otorgados", description: `+${data?.entitlement?.leads_available} leads` });
+            }}
+          >
+            +500 créditos (dev)
           </Button>
           <Button onClick={createFerreteriaRun} disabled={creating} size="sm">
             {creating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
