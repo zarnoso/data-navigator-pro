@@ -17,8 +17,8 @@ async function updateRun(runId: string, patch: Record<string, unknown>) {
   await supabase.from("mapadata_search_runs").update(patch).eq("id", runId);
 }
 
-async function fetchLeads(plan: RunPlan): Promise<NormalizedLead[]> {
-  const all: NormalizedLead[] = [];
+async function fetchLeads(plan: RunPlan): Promise<SourcedLead[]> {
+  const all: SourcedLead[] = [];
   const queries = plan.keywords.map((k) => `${k} en ${plan.comunaSlug}`);
   for (const q of queries) {
     if (all.length >= plan.requestedLimit) break;
@@ -28,14 +28,30 @@ async function fetchLeads(plan: RunPlan): Promise<NormalizedLead[]> {
         const n = normalize(r, plan);
         if (!n) continue;
         n.quality_score = score(n);
-        all.push(n);
+        all.push({ ...n, source: "google_places" });
       }
     } catch (e) {
       log.warn({ q, err: (e as Error).message }, "places_query_failed");
     }
   }
-  return dedupe(all).slice(0, plan.requestedLimit);
+
+  // Fallback gratuito: si Places entregó poco, complementar con DuckDuckGo scraping
+  if (all.length < plan.requestedLimit) {
+    const missing = plan.requestedLimit - all.length;
+    try {
+      const ddg = await fetchLeadsDuckDuckGo(plan, missing);
+      for (const l of ddg) {
+        l.quality_score = score(l);
+        all.push({ ...l, source: "duckduckgo_scrape" });
+      }
+    } catch (e) {
+      log.warn({ err: (e as Error).message }, "ddg_fallback_failed");
+    }
+  }
+
+  return dedupe(all).slice(0, plan.requestedLimit) as SourcedLead[];
 }
+
 
 async function persistLeads(plan: RunPlan, leads: NormalizedLead[]): Promise<string[]> {
   const ids: string[] = [];
