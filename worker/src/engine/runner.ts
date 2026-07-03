@@ -53,7 +53,7 @@ async function fetchLeads(plan: RunPlan): Promise<SourcedLead[]> {
 }
 
 
-async function persistLeads(plan: RunPlan, leads: NormalizedLead[]): Promise<string[]> {
+async function persistLeads(plan: RunPlan, leads: SourcedLead[]): Promise<string[]> {
   const ids: string[] = [];
   const chunkSize = 100;
   for (let i = 0; i < leads.length; i += chunkSize) {
@@ -77,7 +77,7 @@ async function persistLeads(plan: RunPlan, leads: NormalizedLead[]): Promise<str
       comuna_slug: l.comuna_slug,
       industry_slug: l.industry_slug,
       quality_score: l.quality_score,
-      source: "google_places",
+      source: l.source,
     }));
 
     const { data, error } = await supabase
