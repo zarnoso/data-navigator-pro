@@ -5,9 +5,13 @@ import { searchText } from "./google-places.js";
 import { normalize, score, type NormalizedLead } from "./normalizer.js";
 import { dedupe } from "./dedupe.js";
 import { buildXlsx, buildCsv } from "./export-builder.js";
+import { fetchLeadsDuckDuckGo } from "./duckduckgo.js";
 import pino from "pino";
 
 const log = pino({ name: "runner" });
+
+type SourcedLead = NormalizedLead & { source: "google_places" | "duckduckgo_scrape" };
+
 
 async function updateRun(runId: string, patch: Record<string, unknown>) {
   await supabase.from("mapadata_search_runs").update(patch).eq("id", runId);
