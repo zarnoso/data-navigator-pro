@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
   if (!existingInd) {
     await supa.from("mapadata_industry_keywords").insert({
       slug: industrySlug,
-      label: industryInput,
+      display_name: industryInput,
       keywords: [industryInput],
       google_places_types: [],
     });
@@ -89,11 +89,11 @@ Deno.serve(async (req) => {
     if (!geo) return json({ error: "geocode_failed", detail: `no se pudo ubicar "${comunaInput}"` }, 400);
     const { error: comErr } = await supa.from("mapadata_comuna_geos").insert({
       slug: comunaSlug,
-      label: comunaInput,
+      display_name: comunaInput,
       region: body.region ?? geo.region ?? "Desconocida",
-      lat: geo.lat,
-      lng: geo.lng,
-      radius_m: body.radius_m ?? 5000,
+      center_lat: geo.lat,
+      center_lng: geo.lng,
+      radius_meters: body.radius_m ?? 5000,
     });
     if (comErr) return json({ error: "db_error", detail: comErr.message }, 500);
     existingCom = { slug: comunaSlug, region: body.region ?? geo.region ?? "Desconocida" };
