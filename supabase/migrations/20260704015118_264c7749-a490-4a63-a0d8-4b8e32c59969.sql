@@ -1,0 +1,1 @@
+ALTER TABLE public.mapadata_leads ADD CONSTRAINT mapadata_leads_owner_place_unique UNIQUE (owner_user_id, place_id);
