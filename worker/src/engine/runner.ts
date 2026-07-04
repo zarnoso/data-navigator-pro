@@ -58,31 +58,35 @@ async function persistLeads(plan: RunPlan, leads: SourcedLead[]): Promise<string
   const chunkSize = 100;
   for (let i = 0; i < leads.length; i += chunkSize) {
     const chunk = leads.slice(i, i + chunkSize).map((l) => ({
-      user_id: plan.userId,
+      owner_user_id: plan.userId,
+      source: l.source,
       place_id: l.place_id,
       name: l.name,
+      name_normalized: l.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim(),
       address: l.address,
+      comuna_slug: l.comuna_slug,
+      region: l.region,
+      country: "CL",
+      phone: l.phone_raw,
       phone_e164: l.phone_e164,
-      phone_raw: l.phone_raw,
-      website: l.website,
       email: l.email,
-      types: l.types,
-      primary_type: l.primary_type,
+      website: l.website,
+      industry_slug: l.industry_slug,
       lat: l.lat,
       lng: l.lng,
       rating: l.rating,
-      reviews: l.reviews,
-      business_status: l.business_status,
-      region: l.region,
-      comuna_slug: l.comuna_slug,
-      industry_slug: l.industry_slug,
+      rating_count: l.reviews,
       quality_score: l.quality_score,
-      source: l.source,
+      enrichment: {
+        types: l.types,
+        primary_type: l.primary_type,
+        business_status: l.business_status,
+      },
     }));
 
     const { data, error } = await supabase
       .from("mapadata_leads")
-      .upsert(chunk, { onConflict: "user_id,place_id" })
+      .upsert(chunk, { onConflict: "owner_user_id,place_id" })
       .select("id");
     if (error) throw new Error(`persist_leads:${error.message}`);
     if (data) ids.push(...data.map((r: { id: string }) => r.id));
@@ -92,7 +96,12 @@ async function persistLeads(plan: RunPlan, leads: SourcedLead[]): Promise<string
     });
   }
 
-  const runLeads = ids.map((leadId) => ({ run_id: plan.runId, lead_id: leadId }));
+  const runLeads = ids.map((leadId, idx) => ({
+    run_id: plan.runId,
+    lead_id: leadId,
+    user_id: plan.userId,
+    position: idx,
+  }));
   if (runLeads.length) {
     for (let i = 0; i < runLeads.length; i += 500) {
       await supabase.from("mapadata_run_leads").upsert(runLeads.slice(i, i + 500), {
