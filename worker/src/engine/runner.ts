@@ -191,7 +191,8 @@ export async function processRun(runId: string): Promise<void> {
       status: "completed",
       progress_pct: 100,
       worker_finished_at: new Date().toISOString(),
-      result_count: leads.length,
+      leads_found: leads.length,
+      leads_unique: leads.length,
       params: { outputs, credits_consumed: consumed === true ? leads.length : 0 },
     });
     log.info({ runId, leads: leads.length }, "run_done");
