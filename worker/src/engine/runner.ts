@@ -169,7 +169,8 @@ export async function processRun(runId: string): Promise<void> {
         status: "completed",
         progress_pct: 100,
         worker_finished_at: new Date().toISOString(),
-        result_count: 0,
+        leads_found: 0,
+        leads_unique: 0,
         error_message: "no_results",
       });
       return;
