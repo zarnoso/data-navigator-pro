@@ -15,7 +15,8 @@ interface Run {
   requested_limit: number;
   status: string;
   progress_pct: number | null;
-  result_count: number | null;
+  leads_found: number | null;
+  leads_unique: number | null;
   error_message: string | null;
   created_at: string;
 }
