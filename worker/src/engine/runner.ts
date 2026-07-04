@@ -96,7 +96,12 @@ async function persistLeads(plan: RunPlan, leads: SourcedLead[]): Promise<string
     });
   }
 
-  const runLeads = ids.map((leadId) => ({ run_id: plan.runId, lead_id: leadId }));
+  const runLeads = ids.map((leadId, idx) => ({
+    run_id: plan.runId,
+    lead_id: leadId,
+    user_id: plan.userId,
+    position: idx,
+  }));
   if (runLeads.length) {
     for (let i = 0; i < runLeads.length; i += 500) {
       await supabase.from("mapadata_run_leads").upsert(runLeads.slice(i, i + 500), {
