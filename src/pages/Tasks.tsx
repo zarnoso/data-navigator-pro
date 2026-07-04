@@ -15,7 +15,8 @@ interface Run {
   requested_limit: number;
   status: string;
   progress_pct: number | null;
-  result_count: number | null;
+  leads_found: number | null;
+  leads_unique: number | null;
   error_message: string | null;
   created_at: string;
 }
@@ -188,7 +189,7 @@ const Tasks = () => {
                 <CardContent className="text-sm text-muted-foreground space-y-2">
                   <div className="flex flex-wrap gap-4">
                     <span>Progreso: <span className="text-foreground font-medium">{r.progress_pct ?? 0}%</span></span>
-                    <span>Resultados: <span className="text-foreground font-medium">{r.result_count ?? 0}</span></span>
+                    <span>Resultados: <span className="text-foreground font-medium">{r.leads_unique ?? r.leads_found ?? 0}</span></span>
                     <span className="text-xs">{new Date(r.created_at).toLocaleString("es-CL")}</span>
                   </div>
                   {r.status === "running" && (

@@ -39,7 +39,7 @@ export async function buildPlan(runId: string): Promise<RunPlan> {
     formats: run.formats ?? ["xlsx", "csv"],
     keywords: (ind.keywords as string[]) ?? [run.industry_slug],
     placeTypes: (ind.google_places_types as string[]) ?? [],
-    center: { lat: Number(com.lat), lng: Number(com.lng) },
-    radiusM: Number(com.radius_m ?? 5000),
+    center: { lat: Number(com.center_lat), lng: Number(com.center_lng) },
+    radiusM: Number(com.radius_meters ?? 5000),
   };
 }
